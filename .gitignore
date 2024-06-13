@@ -1,0 +1,26 @@
+.Rproj.user
+.Rhistory
+.RData
+src/*.o
+src/*.so
+src/*.dll
+inst/examples/*.o
+inst/examples/*.so
+inst/examples/*.dll
+ignore/
+dde_*.tar.gz
+notes.md
+src/dde.so.dSYM
+tests/testthat/*.so.dSYM
+src/*.gcda
+src/*.gcno
+inst/doc
+vignettes/*.html
+inst/web
+# Additional info I don't want to upload the data into gitHub
+raw_data/
+hipercow/
+renv/
+outputs/
+outputs_compiled/
+Rplots.pdf
