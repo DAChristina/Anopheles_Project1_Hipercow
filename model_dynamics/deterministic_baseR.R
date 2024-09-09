@@ -55,13 +55,14 @@ rs <- c(115, 60, 52,45,30,11,1.5,0.02,0,0,0) #inital values
 timesteps <- 2000 #number of steps
 res <- matrix(NA,nrow=timesteps,ncol=11) #saving outputs matrix
 
+# still on progress
 ## run timesteps
-for (i in 1:timesteps){
-  rs <- vectorPopDyn(rs[1],rs[2],rs[3:11])
-  res[i,] <- rs 
-}
-
-plot(res[,1],type="l")
+# for (i in 1:timesteps){
+#   rs <- vectorPopDyn(rs[1],rs[2],rs[3:11])
+#   res[i,] <- rs 
+# }
+# 
+# plot(res[,1],type="l")
 
 
 ### Disease dynamics ###########################################################
