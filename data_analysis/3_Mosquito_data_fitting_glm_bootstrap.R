@@ -1,0 +1,337 @@
+# bootstrapped confidence interval
+# SOURCE: https://epurdom.github.io/Stat131A/book/curve-fitting.html
+
+# 1. Data used mfE vs. Mosquito proportion with Larvae #########################
+# Data needed:
+# dat_sel$Human_mf_intensity_per20uL
+# dat_sel$Mosquito_larvae_infected_proportion_fromtotaldissected
+# dat_sel$mf_mean_arithmetic_pertotaldissectedmosquito
+# dat_sel$mfE_mean_calculated
+
+# 1. Data preparation ##########################################################
+library(tidyverse)
+library(readxl)
+
+dat_sel <- read.csv("inputs/Mosquito_EstablishedInfection_Data_clean.csv")
+
+# 2. SUCCESSSS glm #############################################################
+# TRIAL use glmm by family.glmm = binomial # FAILED coz' package inconsistencies
+# 2.1. Use mfE vs. Proportion, ALL SPECIES #####################################
+dat_anal <- dat_sel %>% 
+  select(Reference, Mosquito_species, Mosquito_larvae_infected_proportion_fromtotaldissected, Mosquito_totaldissected, Mosquito_larvae_infected_count, mfE_mean_calculated) %>% 
+  filter(!is.na(Mosquito_larvae_infected_proportion_fromtotaldissected) & Mosquito_larvae_infected_proportion_fromtotaldissected != "not_analysed",
+         !is.na(mfE_mean_calculated) & mfE_mean_calculated != "not_analysed") %>%
+  mutate(Unique_ID = row_number()) %>% 
+  # view() %>% 
+  glimpse()
+
+# To simplify my life a bit
+y <- dat_anal$Mosquito_larvae_infected_proportion_fromtotaldissected
+x <- dat_anal$mfE_mean_calculated
+AllMosq <- dat_anal$Mosquito_totaldissected
+AllPos <- dat_anal$Mosquito_larvae_infected_count
+
+# THE BOOTSTRAP! ###############################################################
+bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95) {
+  fit <- glm(cbind(AllPos, AllMosq - AllPos) ~ x, family = binomial(link = "logit"))
+  stat.obs <- coef(fit)
+  sum.all <- summary(fit)
+  std.Err <- sum.all$coefficients[, "Std. Error"] # that pain-in-the ass Std.Err coz examples only calculate CI
+  
+  # Bootstrap function
+  bootFun <- function() {
+    sampled <- sample(1:length(y), size = length(y), replace = TRUE) # Replacement
+    fit_sampled <- glm(cbind(AllPos[sampled], AllMosq[sampled] - AllPos[sampled]) ~ x[sampled], family = binomial(link = "logit"))
+    
+    coef(fit_sampled)
+  }
+  
+  stat.boot <- replicate(repetitions, bootFun())
+  
+  # Format result
+  nm <- deparse(substitute(x))
+  row.names(stat.boot)[2] <- nm
+  level <- 1 - confidence.level
+  confidence.interval <- apply(stat.boot, 1, quantile, probs = c(level/2, 1 - level/2))
+  
+  # CI list and bootstrapped coefficients
+  return(list(
+    confidence.interval = cbind(lower = confidence.interval[1,], 
+                                estimate = stat.obs, 
+                                upper = confidence.interval[2,],
+                                stdError = std.Err), # bind that pain-in-the ass Std.Err
+    bootStats = stat.boot
+  ))
+}
+
+# Call bootstrap with ORI data
+result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos), 
+                       x = dat_anal$mfE_mean_calculated, 
+                       repetitions = 1000, 
+                       confidence.level = 0.95)
+result
+
+# PLOT #########################################################################
+# Confidence intervals
+private_conf <- result$confidence.interval
+private_conf
+
+# Plot the data
+plot(x,y, las = 1, pch = 1,
+     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes with established larvae",
+     xlim = c(0,10), ylim = c(0,1), col = "grey50", cex = AllMosq/80)
+
+lower <- private_conf[,1]
+estim <- private_conf[,2] # the equation!
+upper <- private_conf[,3]
+
+logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
+  1/(1+exp(-(l1+l2*x)))
+}
+
+curve(logit(x, estim[1], estim[2]), col = "grey10", add = TRUE, lwd = 2) # the equation based on bootstrap
+curve(logit(x, upper[1], upper[2]), col = "grey35", add = TRUE, lty = 2) # Upper bound
+curve(logit(x, lower[1], lower[2]), col = "grey35", add = TRUE, lty = 2) # Lower bound
+
+
+# 2.2. Use mfE vs. Proportion, An. gambiae #####################################
+# par(mfrow = c(1,2)) # for plotting together An. g & An. a in one output
+dat_anal <- dat_sel %>% 
+  select(Mosquito_species, Mosquito_larvae_infected_proportion_fromtotaldissected, Mosquito_totaldissected, Mosquito_larvae_infected_count, mfE_mean_calculated) %>% 
+  filter(!is.na(Mosquito_larvae_infected_proportion_fromtotaldissected) & Mosquito_larvae_infected_proportion_fromtotaldissected != "not_analysed",
+         !is.na(mfE_mean_calculated) & mfE_mean_calculated != "not_analysed",
+         Mosquito_species == "An. gambiae") %>%
+  mutate(Unique_ID = row_number()) %>% 
+  # view() %>% 
+  glimpse()
+
+# To simplify my life a bit
+y <- dat_anal$Mosquito_larvae_infected_proportion_fromtotaldissected
+x <- dat_anal$mfE_mean_calculated
+AllMosq <- dat_anal$Mosquito_totaldissected
+AllPos <- dat_anal$Mosquito_larvae_infected_count
+
+# THE BOOTSTRAP! ###############################################################
+bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95) {
+  fit <- glm(cbind(AllPos, AllMosq - AllPos) ~ x, family = binomial(link = "logit"))
+  stat.obs <- coef(fit)
+  sum.all <- summary(fit)
+  std.Err <- sum.all$coefficients[, "Std. Error"] # that pain-in-the ass Std.Err coz examples only calculate CI
+  
+  # Bootstrap function
+  bootFun <- function() {
+    sampled <- sample(1:length(y), size = length(y), replace = TRUE) # Replacement
+    fit_sampled <- glm(cbind(AllPos[sampled], AllMosq[sampled] - AllPos[sampled]) ~ x[sampled], family = binomial(link = "logit"))
+    
+    coef(fit_sampled)
+  }
+  
+  stat.boot <- replicate(repetitions, bootFun())
+  
+  # Format result
+  nm <- deparse(substitute(x))
+  row.names(stat.boot)[2] <- nm
+  level <- 1 - confidence.level
+  confidence.interval <- apply(stat.boot, 1, quantile, probs = c(level/2, 1 - level/2))
+  
+  # CI list and bootstrapped coefficients
+  return(list(
+    confidence.interval = cbind(lower = confidence.interval[1,], 
+                                estimate = stat.obs, 
+                                upper = confidence.interval[2,],
+                                stdError = std.Err), # bind that pain-in-the ass Std.Err
+    bootStats = stat.boot
+  ))
+}
+
+# Call bootstrap with ORI data
+result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos), 
+                       x = dat_anal$mfE_mean_calculated, 
+                       repetitions = 1000, 
+                       confidence.level = 0.95)
+result
+
+# PLOT #########################################################################
+# Confidence intervals
+private_conf <- result$confidence.interval
+private_conf
+
+# Plot the data
+plot(x,y, las = 1, pch = 1,
+     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes with established larvae",
+     xlim = c(0,10), ylim = c(0,1), col = "red", cex = AllMosq/80)
+
+lower <- private_conf[,1]
+estim <- private_conf[,2] # the equation!
+upper <- private_conf[,3]
+
+logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
+  1/(1+exp(-(l1+l2*x)))
+}
+
+curve(logit(x, estim[1], estim[2]), col = "darkred", add = TRUE, lwd = 2) # the equation based on bootstrap
+curve(logit(x, upper[1], upper[2]), col = "violetred1", add = TRUE, lty = 2) # Upper bound
+curve(logit(x, lower[1], lower[2]), col = "violetred1", add = TRUE, lty = 2) # Lower bound
+
+
+# 2.3. Use mfE vs. Proportion, An. arabiensis #####################################
+dat_anal <- dat_sel %>% 
+  select(Mosquito_species, Mosquito_larvae_infected_proportion_fromtotaldissected, Mosquito_totaldissected, Mosquito_larvae_infected_count, mfE_mean_calculated) %>% 
+  filter(!is.na(Mosquito_larvae_infected_proportion_fromtotaldissected) & Mosquito_larvae_infected_proportion_fromtotaldissected != "not_analysed",
+         !is.na(mfE_mean_calculated) & mfE_mean_calculated != "not_analysed",
+         Mosquito_species == "An. arabiensis") %>%
+  mutate(Unique_ID = row_number()) %>% 
+  # view() %>% 
+  glimpse()
+
+# To simplify my life a bit
+y <- dat_anal$Mosquito_larvae_infected_proportion_fromtotaldissected
+x <- dat_anal$mfE_mean_calculated
+AllMosq <- dat_anal$Mosquito_totaldissected
+AllPos <- dat_anal$Mosquito_larvae_infected_count
+
+# THE BOOTSTRAP! ###############################################################
+# THE BOOTSTRAP! ###############################################################
+bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95) {
+  fit <- glm(cbind(AllPos, AllMosq - AllPos) ~ x, family = binomial(link = "logit"))
+  stat.obs <- coef(fit)
+  sum.all <- summary(fit)
+  std.Err <- sum.all$coefficients[, "Std. Error"] # that pain-in-the ass Std.Err coz examples only calculate CI
+  
+  # Bootstrap function
+  bootFun <- function() {
+    sampled <- sample(1:length(y), size = length(y), replace = TRUE) # Replacement
+    fit_sampled <- glm(cbind(AllPos[sampled], AllMosq[sampled] - AllPos[sampled]) ~ x[sampled], family = binomial(link = "logit"))
+    
+    coef(fit_sampled)
+  }
+  
+  stat.boot <- replicate(repetitions, bootFun())
+  
+  # Format result
+  nm <- deparse(substitute(x))
+  row.names(stat.boot)[2] <- nm
+  level <- 1 - confidence.level
+  confidence.interval <- apply(stat.boot, 1, quantile, probs = c(level/2, 1 - level/2))
+  
+  # CI list and bootstrapped coefficients
+  return(list(
+    confidence.interval = cbind(lower = confidence.interval[1,], 
+                                estimate = stat.obs, 
+                                upper = confidence.interval[2,],
+                                stdError = std.Err), # bind that pain-in-the ass Std.Err
+    bootStats = stat.boot
+  ))
+}
+
+# Call bootstrap with ORI data
+result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos), 
+                       x = dat_anal$mfE_mean_calculated, 
+                       repetitions = 1000, 
+                       confidence.level = 0.95)
+result
+
+# PLOT #########################################################################
+# Confidence intervals
+private_conf <- result$confidence.interval
+private_conf
+
+# Plot the data
+plot(x,y, las = 1, pch = 1,
+     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes with established larvae",
+     xlim = c(0,10), ylim = c(0,1), col = "blue", cex = AllMosq/80)
+
+lower <- private_conf[,1]
+estim <- private_conf[,2] # the equation!
+upper <- private_conf[,3]
+
+logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
+  1/(1+exp(-(l1+l2*x)))
+}
+
+curve(logit(x, estim[1], estim[2]), col = "darkblue", add = TRUE, lwd = 2) # the equation based on bootstrap
+curve(logit(x, upper[1], upper[2]), col = "steelblue", add = TRUE, lty = 2) # Upper bound
+curve(logit(x, lower[1], lower[2]), col = "steelblue", add = TRUE, lty = 2) # Lower bound
+
+par(mfrow = c(1,1))
+
+# 2.4. Use mfE vs. Proportion, An. melas #######################################
+dat_anal <- dat_sel %>% 
+  select(Mosquito_species, Mosquito_larvae_infected_proportion_fromtotaldissected, Mosquito_totaldissected, Mosquito_larvae_infected_count, mfE_mean_calculated) %>% 
+  filter(!is.na(Mosquito_larvae_infected_proportion_fromtotaldissected) & Mosquito_larvae_infected_proportion_fromtotaldissected != "not_analysed",
+         !is.na(mfE_mean_calculated) & mfE_mean_calculated != "not_analysed",
+         Mosquito_species == "An. melas") %>%
+  mutate(Unique_ID = row_number()) %>% 
+  # view() %>% 
+  glimpse()
+
+# To simplify my life a bit
+y <- dat_anal$Mosquito_larvae_infected_proportion_fromtotaldissected
+x <- dat_anal$mfE_mean_calculated
+AllMosq <- dat_anal$Mosquito_totaldissected
+AllPos <- dat_anal$Mosquito_larvae_infected_count
+
+# THE BOOTSTRAP! ###############################################################
+# THE BOOTSTRAP! ###############################################################
+bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95) {
+  fit <- glm(cbind(AllPos, AllMosq - AllPos) ~ x, family = binomial(link = "logit"))
+  stat.obs <- coef(fit)
+  sum.all <- summary(fit)
+  std.Err <- sum.all$coefficients[, "Std. Error"] # that pain-in-the ass Std.Err coz examples only calculate CI
+  
+  # Bootstrap function
+  bootFun <- function() {
+    sampled <- sample(1:length(y), size = length(y), replace = TRUE) # Replacement
+    fit_sampled <- glm(cbind(AllPos[sampled], AllMosq[sampled] - AllPos[sampled]) ~ x[sampled], family = binomial(link = "logit"))
+    
+    coef(fit_sampled)
+  }
+  
+  stat.boot <- replicate(repetitions, bootFun())
+  
+  # Format result
+  nm <- deparse(substitute(x))
+  row.names(stat.boot)[2] <- nm
+  level <- 1 - confidence.level
+  confidence.interval <- apply(stat.boot, 1, quantile, probs = c(level/2, 1 - level/2))
+  
+  # CI list and bootstrapped coefficients
+  return(list(
+    confidence.interval = cbind(lower = confidence.interval[1,], 
+                                estimate = stat.obs, 
+                                upper = confidence.interval[2,],
+                                stdError = std.Err), # bind that pain-in-the ass Std.Err
+    bootStats = stat.boot
+  ))
+}
+
+# Call bootstrap with ORI data
+result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos), 
+                       x = dat_anal$mfE_mean_calculated, 
+                       repetitions = 1000, 
+                       confidence.level = 0.95)
+result
+
+# PLOT #########################################################################
+# Confidence intervals
+private_conf <- result$confidence.interval
+private_conf
+
+# Plot the data
+plot(x,y, las = 1, pch = 1,
+     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes with established larvae",
+     xlim = c(0,10), ylim = c(0,1), col = "forestgreen", cex = AllMosq/80)
+
+lower <- private_conf[,1]
+estim <- private_conf[,2] # the equation!
+upper <- private_conf[,3]
+
+logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
+  1/(1+exp(-(l1+l2*x)))
+}
+
+curve(logit(x, estim[1], estim[2]), col = "darkgreen", add = TRUE, lwd = 2) # the equation based on bootstrap
+curve(logit(x, upper[1], upper[2]), col = "darkseagreen4", add = TRUE, lty = 2) # Upper bound
+curve(logit(x, lower[1], lower[2]), col = "darkseagreen4", add = TRUE, lty = 2) # Lower bound
+
+par(mfrow = c(1,1))

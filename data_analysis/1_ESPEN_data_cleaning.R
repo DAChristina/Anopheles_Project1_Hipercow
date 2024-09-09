@@ -40,27 +40,37 @@ G_BF_ESPEN <- merge(Year_anyone, G_BF_ESPEN, by.x = "Year", by.y = "Year_start",
 
 # Confidence Interval Calculations #############################################
 G_BF_ESPEN_Y <- G_BF_ESPEN %>% 
-  filter(Year >= 2015,
-         Positive != "null",
+  dplyr::filter(Year >= 2015,
+         Method_1 %in% c("Parasitological", "Serological"), # "Parasitological" for blood smear; "Serological" for FTS or ICT
          Examined != "null") %>% 
-  mutate(Prevalence = as.numeric(Prevalence),
+  dplyr::mutate(Prevalence = as.numeric(Prevalence),
          Examined = as.numeric(Examined),
          Positive = as.numeric(Positive),
-         Calc_Prevalence = Positive/Examined,
+         Calc_Proportion = Positive/Examined,
          Conf_Int = binom.exact(Positive, Examined)) %>% 
-  mutate(Prevalence = Prevalence) %>%  # Prevalence in per cent
-  mutate(lo_CI = Conf_Int$lower,
+  dplyr::mutate(Prevalence = Prevalence) %>%  # Prevalence in per cent
+  dplyr::mutate(lo_CI = Conf_Int$lower,
          up_CI = Conf_Int$upper) # Show confint data
 
 # See isoolated result:
 G_BF_ESPEN_Y_isod <- G_BF_ESPEN_Y %>% 
-  select(Year, ADMIN1_NAME, ADMIN2_NAME, LocationName, Latitude, Longitude, Positive, Examined, Prevalence, Calc_Prevalence, lo_CI, up_CI) %>% 
-  filter(ADMIN1_NAME == "Sud-Ouest") %>% # Focused on South-west
-  view() %>% 
-  glimpse()
-
+  dplyr::select(Year, ADMIN1_NAME, ADMIN2_NAME, LocationName, Latitude, Longitude, Method_1, Positive, Examined, Prevalence, Calc_Proportion, lo_CI, up_CI) %>% 
+  dplyr::filter(ADMIN1_NAME == "Sud-Ouest") %>% # Focused on South-west
+  # view() %>% 
+  dplyr::glimpse()
 
 dir.create("inputs", FALSE, TRUE)
-write.csv(G_BF_ESPEN, "inputs/data_BF_LF_sitelevel_cleaned.csv", row.names = TRUE)
+write.csv(G_BF_ESPEN_Y_isod, "inputs/data_BF_LF_sitelevel_cleaned.csv", row.names = TRUE)
 
-
+dir.create("pictures", FALSE, TRUE)
+png(filename = "pictures/LF_proportion_SouthWest.png", width = 700, height = 400)
+ggplot(G_BF_ESPEN_Y_isod, aes(x = Year, y = Calc_Proportion, ymin = lo_CI, ymax = up_CI)) +
+  geom_point(aes(color = Method_1, fill = Method_1), shape=21, size=3) +
+  geom_hline(yintercept=.01, linetype="dashed", color = "red") + # WHO proposed 1%
+  geom_hline(yintercept=.02, linetype="dashed", color = "steelblue") + # WHO proposed 2%
+  facet_wrap(~ ADMIN2_NAME) +
+  labs(x = "Year", y = "Proportion", title = "The proportion of LF (Parasitological and Serological) in South-west Region (2015-2021)") +
+  geom_segment(aes(x = Year, xend = Year, y = lo_CI, yend = up_CI), color = "black") +
+  theme_minimal() +
+  theme(panel.border = element_rect(color = "black", fill = NA))
+dev.off()
