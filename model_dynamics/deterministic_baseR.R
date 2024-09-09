@@ -97,8 +97,8 @@ vectorDisDyn <- function(E,L,N,S_v,E_v,I_v){
   tmpE_v = E_v
   tmpI_v = I_v
   
-  muE = mu0^3*(1+(tmpE+tmpL)/K)
-  muL = mu1^3*(1+sg*(tmpE+tmpL)/K)
+  muE = mu0*3*(1+(tmpE+tmpL)/K)
+  muL = mu1*3*(1+sg*(tmpE+tmpL)/K)
   
   # Aquatic Phases
   # By using survived
