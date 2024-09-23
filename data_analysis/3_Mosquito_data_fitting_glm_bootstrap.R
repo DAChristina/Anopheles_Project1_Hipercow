@@ -32,35 +32,44 @@ AllMosq <- dat_anal$Mosquito_totaldissected
 AllPos <- dat_anal$Mosquito_larvae_infected_count
 
 # THE BOOTSTRAP! ###############################################################
-bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95) {
+bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95, seed = 0) {
+  set.seed(seed)  # For reproducibility
   fit <- glm(cbind(AllPos, AllMosq - AllPos) ~ x, family = binomial(link = "logit"))
   stat.obs <- coef(fit)
   sum.all <- summary(fit)
   std.Err <- sum.all$coefficients[, "Std. Error"] # that pain-in-the ass Std.Err coz examples only calculate CI
   
+  # Predict fitted values for the original data
+  fitted_values_original <- predict(fit, type = "response")  # Logistic predictions
+  
   # Bootstrap function
   bootFun <- function() {
-    sampled <- sample(1:length(y), size = length(y), replace = TRUE) # Replacement
+    sampled <- sample(1:length(y), size = length(y), replace = TRUE)
     fit_sampled <- glm(cbind(AllPos[sampled], AllMosq[sampled] - AllPos[sampled]) ~ x[sampled], family = binomial(link = "logit"))
     
-    coef(fit_sampled)
+    list(coef = coef(fit_sampled), fitted = predict(fit_sampled, type = "response")) # Return from the resampled model
   }
   
-  stat.boot <- replicate(repetitions, bootFun())
+  stat.boot <- replicate(repetitions, bootFun(), simplify = FALSE)
   
-  # Format result
-  nm <- deparse(substitute(x))
-  row.names(stat.boot)[2] <- nm
+  boot.coefs <- sapply(stat.boot, `[[`, "coef")
+  boot.fitted <- do.call(cbind, lapply(stat.boot, `[[`, "fitted"))
+  
   level <- 1 - confidence.level
-  confidence.interval <- apply(stat.boot, 1, quantile, probs = c(level/2, 1 - level/2))
+  confidence.interval <- apply(boot.coefs, 1, quantile, probs = c(level/2, 1 - level/2))
   
-  # CI list and bootstrapped coefficients
+  # Confidence intervals for fitted values
+  fitted.lower <- apply(boot.fitted, 1, quantile, probs = level/2)
+  fitted.upper <- apply(boot.fitted, 1, quantile, probs = 1 - level/2)
+  
+  # Return bootstrapped results: coefficients, fitted values, and their confidence intervals
   return(list(
     confidence.interval = cbind(lower = confidence.interval[1,], 
                                 estimate = stat.obs, 
                                 upper = confidence.interval[2,],
-                                stdError = std.Err), # bind that pain-in-the ass Std.Err
-    bootStats = stat.boot
+                                stdError = std.Err),
+    bootStats = boot.coefs,  # Bootstrapped coefficients
+    fittedValues = list(original = fitted_values_original, lower = fitted.lower, upper = fitted.upper)
   ))
 }
 
@@ -68,13 +77,17 @@ bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95) {
 result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos), 
                        x = dat_anal$mfE_mean_calculated, 
                        repetitions = 1000, 
-                       confidence.level = 0.95)
-result
+                       confidence.level = 0.95,
+                       seed = 0)
+# result
 
 # PLOT #########################################################################
 # Confidence intervals
 private_conf <- result$confidence.interval
-private_conf
+# private_conf
+
+# Bootstapped estim values (averaged)
+private_estim <- rowMeans(result$bootStats)
 
 # Plot the data
 plot(x,y, las = 1, pch = 1,
@@ -82,7 +95,7 @@ plot(x,y, las = 1, pch = 1,
      xlim = c(0,10), ylim = c(0,1), col = "grey50", cex = AllMosq/80)
 
 lower <- private_conf[,1]
-estim <- private_conf[,2] # the equation!
+estim <- private_estim # the equation! (instead of private_conf[,2])
 upper <- private_conf[,3]
 
 logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
@@ -112,49 +125,23 @@ AllMosq <- dat_anal$Mosquito_totaldissected
 AllPos <- dat_anal$Mosquito_larvae_infected_count
 
 # THE BOOTSTRAP! ###############################################################
-bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95) {
-  fit <- glm(cbind(AllPos, AllMosq - AllPos) ~ x, family = binomial(link = "logit"))
-  stat.obs <- coef(fit)
-  sum.all <- summary(fit)
-  std.Err <- sum.all$coefficients[, "Std. Error"] # that pain-in-the ass Std.Err coz examples only calculate CI
-  
-  # Bootstrap function
-  bootFun <- function() {
-    sampled <- sample(1:length(y), size = length(y), replace = TRUE) # Replacement
-    fit_sampled <- glm(cbind(AllPos[sampled], AllMosq[sampled] - AllPos[sampled]) ~ x[sampled], family = binomial(link = "logit"))
-    
-    coef(fit_sampled)
-  }
-  
-  stat.boot <- replicate(repetitions, bootFun())
-  
-  # Format result
-  nm <- deparse(substitute(x))
-  row.names(stat.boot)[2] <- nm
-  level <- 1 - confidence.level
-  confidence.interval <- apply(stat.boot, 1, quantile, probs = c(level/2, 1 - level/2))
-  
-  # CI list and bootstrapped coefficients
-  return(list(
-    confidence.interval = cbind(lower = confidence.interval[1,], 
-                                estimate = stat.obs, 
-                                upper = confidence.interval[2,],
-                                stdError = std.Err), # bind that pain-in-the ass Std.Err
-    bootStats = stat.boot
-  ))
-}
+# bootstrapGLM have defined previously
 
 # Call bootstrap with ORI data
 result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos), 
                        x = dat_anal$mfE_mean_calculated, 
                        repetitions = 1000, 
-                       confidence.level = 0.95)
-result
+                       confidence.level = 0.95,
+                       seed = 0)
+# result
 
 # PLOT #########################################################################
 # Confidence intervals
 private_conf <- result$confidence.interval
-private_conf
+# private_conf
+
+# Bootstapped estim values (averaged)
+private_estim <- rowMeans(result$bootStats)
 
 # Plot the data
 plot(x,y, las = 1, pch = 1,
@@ -162,7 +149,7 @@ plot(x,y, las = 1, pch = 1,
      xlim = c(0,10), ylim = c(0,1), col = "red", cex = AllMosq/80)
 
 lower <- private_conf[,1]
-estim <- private_conf[,2] # the equation!
+estim <- private_estim # the equation! (instead of private_conf[,2])
 upper <- private_conf[,3]
 
 logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
@@ -192,49 +179,23 @@ AllPos <- dat_anal$Mosquito_larvae_infected_count
 
 # THE BOOTSTRAP! ###############################################################
 # THE BOOTSTRAP! ###############################################################
-bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95) {
-  fit <- glm(cbind(AllPos, AllMosq - AllPos) ~ x, family = binomial(link = "logit"))
-  stat.obs <- coef(fit)
-  sum.all <- summary(fit)
-  std.Err <- sum.all$coefficients[, "Std. Error"] # that pain-in-the ass Std.Err coz examples only calculate CI
-  
-  # Bootstrap function
-  bootFun <- function() {
-    sampled <- sample(1:length(y), size = length(y), replace = TRUE) # Replacement
-    fit_sampled <- glm(cbind(AllPos[sampled], AllMosq[sampled] - AllPos[sampled]) ~ x[sampled], family = binomial(link = "logit"))
-    
-    coef(fit_sampled)
-  }
-  
-  stat.boot <- replicate(repetitions, bootFun())
-  
-  # Format result
-  nm <- deparse(substitute(x))
-  row.names(stat.boot)[2] <- nm
-  level <- 1 - confidence.level
-  confidence.interval <- apply(stat.boot, 1, quantile, probs = c(level/2, 1 - level/2))
-  
-  # CI list and bootstrapped coefficients
-  return(list(
-    confidence.interval = cbind(lower = confidence.interval[1,], 
-                                estimate = stat.obs, 
-                                upper = confidence.interval[2,],
-                                stdError = std.Err), # bind that pain-in-the ass Std.Err
-    bootStats = stat.boot
-  ))
-}
+# bootstrapGLM have defined previously
 
 # Call bootstrap with ORI data
 result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos), 
                        x = dat_anal$mfE_mean_calculated, 
                        repetitions = 1000, 
-                       confidence.level = 0.95)
-result
+                       confidence.level = 0.95,
+                       seed = 0)
+# result
 
 # PLOT #########################################################################
 # Confidence intervals
 private_conf <- result$confidence.interval
-private_conf
+# private_conf
+
+# Bootstapped estim values (averaged)
+private_estim <- rowMeans(result$bootStats)
 
 # Plot the data
 plot(x,y, las = 1, pch = 1,
@@ -242,7 +203,7 @@ plot(x,y, las = 1, pch = 1,
      xlim = c(0,10), ylim = c(0,1), col = "blue", cex = AllMosq/80)
 
 lower <- private_conf[,1]
-estim <- private_conf[,2] # the equation!
+estim <- private_estim # the equation! (instead of private_conf[,2])
 upper <- private_conf[,3]
 
 logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
@@ -273,49 +234,23 @@ AllPos <- dat_anal$Mosquito_larvae_infected_count
 
 # THE BOOTSTRAP! ###############################################################
 # THE BOOTSTRAP! ###############################################################
-bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95) {
-  fit <- glm(cbind(AllPos, AllMosq - AllPos) ~ x, family = binomial(link = "logit"))
-  stat.obs <- coef(fit)
-  sum.all <- summary(fit)
-  std.Err <- sum.all$coefficients[, "Std. Error"] # that pain-in-the ass Std.Err coz examples only calculate CI
-  
-  # Bootstrap function
-  bootFun <- function() {
-    sampled <- sample(1:length(y), size = length(y), replace = TRUE) # Replacement
-    fit_sampled <- glm(cbind(AllPos[sampled], AllMosq[sampled] - AllPos[sampled]) ~ x[sampled], family = binomial(link = "logit"))
-    
-    coef(fit_sampled)
-  }
-  
-  stat.boot <- replicate(repetitions, bootFun())
-  
-  # Format result
-  nm <- deparse(substitute(x))
-  row.names(stat.boot)[2] <- nm
-  level <- 1 - confidence.level
-  confidence.interval <- apply(stat.boot, 1, quantile, probs = c(level/2, 1 - level/2))
-  
-  # CI list and bootstrapped coefficients
-  return(list(
-    confidence.interval = cbind(lower = confidence.interval[1,], 
-                                estimate = stat.obs, 
-                                upper = confidence.interval[2,],
-                                stdError = std.Err), # bind that pain-in-the ass Std.Err
-    bootStats = stat.boot
-  ))
-}
+# bootstrapGLM have defined previously
 
 # Call bootstrap with ORI data
 result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos), 
                        x = dat_anal$mfE_mean_calculated, 
                        repetitions = 1000, 
-                       confidence.level = 0.95)
-result
+                       confidence.level = 0.95,
+                       seed = 0)
+# result
 
 # PLOT #########################################################################
 # Confidence intervals
 private_conf <- result$confidence.interval
-private_conf
+# private_conf
+
+# Bootstapped estim values (averaged)
+private_estim <- rowMeans(result$bootStats)
 
 # Plot the data
 plot(x,y, las = 1, pch = 1,
@@ -323,7 +258,7 @@ plot(x,y, las = 1, pch = 1,
      xlim = c(0,10), ylim = c(0,1), col = "forestgreen", cex = AllMosq/80)
 
 lower <- private_conf[,1]
-estim <- private_conf[,2] # the equation!
+estim <- private_estim # the equation! (instead of private_conf[,2])
 upper <- private_conf[,3]
 
 logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
