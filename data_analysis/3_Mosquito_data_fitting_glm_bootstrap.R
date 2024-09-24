@@ -73,6 +73,10 @@ bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95, seed = 0) {
   ))
 }
 
+logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
+  1/(1+exp(-(l1+l2*x)))
+}
+
 # Call bootstrap with ORI data
 result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos), 
                        x = dat_anal$mfE_mean_calculated, 
@@ -84,27 +88,26 @@ result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos),
 # PLOT #########################################################################
 # Confidence intervals
 private_conf <- result$confidence.interval
-# private_conf
 
 # Bootstapped estim values (averaged)
 private_estim <- rowMeans(result$bootStats)
 
-# Plot the data
-plot(x,y, las = 1, pch = 1,
-     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes with established larvae",
-     xlim = c(0,10), ylim = c(0,1), col = "grey50", cex = AllMosq/80)
-
+# Define parameters for logit function
 lower <- private_conf[,1]
 estim <- private_estim # the equation! (instead of private_conf[,2])
 upper <- private_conf[,3]
 
-logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
-  1/(1+exp(-(l1+l2*x)))
-}
+# Plot the data
+png("pictures/propvsave_1_all.png", width = 17, height = 12, unit = "cm", res = 1200)
+par(mar = c(4, 5, 1, 1)) # bottom, left, top, right
+plot(x,y, las = 1, pch = 1,
+     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes\nwith established larvae",
+     xlim = c(0,10), ylim = c(0,1), col = "grey50", cex = AllMosq/80)
 
 curve(logit(x, estim[1], estim[2]), col = "grey10", add = TRUE, lwd = 2) # the equation based on bootstrap
 curve(logit(x, upper[1], upper[2]), col = "grey35", add = TRUE, lty = 2) # Upper bound
 curve(logit(x, lower[1], lower[2]), col = "grey35", add = TRUE, lty = 2) # Lower bound
+dev.off()
 
 
 # 2.2. Use mfE vs. Proportion, An. gambiae #####################################
@@ -138,27 +141,26 @@ result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos),
 # PLOT #########################################################################
 # Confidence intervals
 private_conf <- result$confidence.interval
-# private_conf
 
 # Bootstapped estim values (averaged)
 private_estim <- rowMeans(result$bootStats)
 
-# Plot the data
-plot(x,y, las = 1, pch = 1,
-     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes with established larvae",
-     xlim = c(0,10), ylim = c(0,1), col = "red", cex = AllMosq/80)
-
+# Define parameters for logit function
 lower <- private_conf[,1]
 estim <- private_estim # the equation! (instead of private_conf[,2])
 upper <- private_conf[,3]
 
-logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
-  1/(1+exp(-(l1+l2*x)))
-}
+# Plot the data
+png("pictures/propvsave_2_Angambiae.png", width = 17, height = 12, unit = "cm", res = 1200)
+par(mar = c(4, 5, 1, 1)) # bottom, left, top, right
+plot(x,y, las = 1, pch = 1,
+     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes\nwith established larvae",
+     xlim = c(0,10), ylim = c(0,1), col = "red", cex = AllMosq/80)
 
 curve(logit(x, estim[1], estim[2]), col = "darkred", add = TRUE, lwd = 2) # the equation based on bootstrap
 curve(logit(x, upper[1], upper[2]), col = "violetred1", add = TRUE, lty = 2) # Upper bound
 curve(logit(x, lower[1], lower[2]), col = "violetred1", add = TRUE, lty = 2) # Lower bound
+dev.off()
 
 
 # 2.3. Use mfE vs. Proportion, An. arabiensis #####################################
@@ -192,29 +194,27 @@ result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos),
 # PLOT #########################################################################
 # Confidence intervals
 private_conf <- result$confidence.interval
-# private_conf
 
 # Bootstapped estim values (averaged)
 private_estim <- rowMeans(result$bootStats)
 
-# Plot the data
-plot(x,y, las = 1, pch = 1,
-     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes with established larvae",
-     xlim = c(0,10), ylim = c(0,1), col = "blue", cex = AllMosq/80)
-
+# Define parameters for logit function
 lower <- private_conf[,1]
 estim <- private_estim # the equation! (instead of private_conf[,2])
 upper <- private_conf[,3]
 
-logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
-  1/(1+exp(-(l1+l2*x)))
-}
+# Plot the data
+png("pictures/propvsave_3_Anarabiensis.png", width = 17, height = 12, unit = "cm", res = 1200)
+par(mar = c(4, 5, 1, 1)) # bottom, left, top, right
+plot(x,y, las = 1, pch = 1,
+     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes\nwith established larvae",
+     xlim = c(0,10), ylim = c(0,1), col = "blue", cex = AllMosq/80)
 
 curve(logit(x, estim[1], estim[2]), col = "darkblue", add = TRUE, lwd = 2) # the equation based on bootstrap
 curve(logit(x, upper[1], upper[2]), col = "steelblue", add = TRUE, lty = 2) # Upper bound
 curve(logit(x, lower[1], lower[2]), col = "steelblue", add = TRUE, lty = 2) # Lower bound
+dev.off()
 
-par(mfrow = c(1,1))
 
 # 2.4. Use mfE vs. Proportion, An. melas #######################################
 dat_anal <- dat_sel %>% 
@@ -247,26 +247,26 @@ result <- bootstrapGLM(y = cbind(AllPos, AllMosq - AllPos),
 # PLOT #########################################################################
 # Confidence intervals
 private_conf <- result$confidence.interval
-# private_conf
 
 # Bootstapped estim values (averaged)
 private_estim <- rowMeans(result$bootStats)
 
-# Plot the data
-plot(x,y, las = 1, pch = 1,
-     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes with established larvae",
-     xlim = c(0,10), ylim = c(0,1), col = "forestgreen", cex = AllMosq/80)
-
+# Define parameters for logit function
 lower <- private_conf[,1]
 estim <- private_estim # the equation! (instead of private_conf[,2])
 upper <- private_conf[,3]
 
-logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
-  1/(1+exp(-(l1+l2*x)))
-}
+# Plot the data
+png("pictures/propvsave_4_Anmelas.png", width = 17, height = 12, unit = "cm", res = 1200)
+par(mar = c(4, 5, 1, 1)) # bottom, left, top, right
+plot(x,y, las = 1, pch = 1,
+     xlab = "Average of ingested mf in mosquitoes", ylab = "Proportion of dissected mosquitoes\nwith established larvae",
+     xlim = c(0,10), ylim = c(0,1), col = "forestgreen", cex = AllMosq/80)
 
 curve(logit(x, estim[1], estim[2]), col = "darkgreen", add = TRUE, lwd = 2) # the equation based on bootstrap
 curve(logit(x, upper[1], upper[2]), col = "darkseagreen4", add = TRUE, lty = 2) # Upper bound
 curve(logit(x, lower[1], lower[2]), col = "darkseagreen4", add = TRUE, lty = 2) # Lower bound
+dev.off()
 
-par(mfrow = c(1,1))
+
+# Additional cowpar(mar = c(4, 5, 1, 1)) # bottom, left, top, right for three Anopheles species (to be continued)
