@@ -92,6 +92,10 @@ private_conf <- result$confidence.interval
 # Bootstapped estim values (averaged)
 private_estim <- rowMeans(result$bootStats)
 
+# Save df result
+combined_all <- cbind(private_conf, data.frame(estimate_glm_bootstrapped = as.numeric(private_estim))) %>% 
+  mutate(mosquito = "all")
+
 # Define parameters for logit function
 lower <- private_conf[,1]
 estim <- private_estim # the equation! (instead of private_conf[,2])
@@ -144,6 +148,10 @@ private_conf <- result$confidence.interval
 
 # Bootstapped estim values (averaged)
 private_estim <- rowMeans(result$bootStats)
+
+# Save df result
+combined_Ang <- cbind(private_conf, data.frame(estimate_glm_bootstrapped = as.numeric(private_estim))) %>% 
+  mutate(mosquito = "An. gambiae")
 
 # Define parameters for logit function
 lower <- private_conf[,1]
@@ -198,6 +206,10 @@ private_conf <- result$confidence.interval
 # Bootstapped estim values (averaged)
 private_estim <- rowMeans(result$bootStats)
 
+# Save df result
+combined_Ana <- cbind(private_conf, data.frame(estimate_glm_bootstrapped = as.numeric(private_estim))) %>% 
+  mutate(mosquito = "An. arabiensis")
+
 # Define parameters for logit function
 lower <- private_conf[,1]
 estim <- private_estim # the equation! (instead of private_conf[,2])
@@ -250,6 +262,14 @@ private_conf <- result$confidence.interval
 
 # Bootstapped estim values (averaged)
 private_estim <- rowMeans(result$bootStats)
+
+# Save df result
+combined_Anm <- cbind(private_conf, data.frame(estimate_glm_bootstrapped = as.numeric(private_estim))) %>% 
+  mutate(mosquito = "An. melas")
+
+combined_final <- rbind(combined_all, combined_Ang, combined_Ana, combined_Anm)
+
+write.csv(combined_final, "outputs/mosquitoes_logit_parameters.csv", row.names = T)
 
 # Define parameters for logit function
 lower <- private_conf[,1]
