@@ -15,7 +15,7 @@ dat <- readxl::read_excel('raw_data/Mosquito_EstablishedInfection_Data.xlsx') %>
 dat_sel <- dat %>% 
   dplyr::select(Reference, Human_mf_intensity_per1mL, Human_mf_intensity_per20uL, Mosquito_species, Mosquito_totaldissected, Mosquito_mf_infected_count, Mosquito_mf_infected_proportion, mf_mean_arithmetic_pertotaldissectedmosquito, Mosquito_larvae_infected_count, Mosquito_larvae_infected_proportion_fromtotaldissected, Larvae_mean_arithmetic_perdissectedmosquito) %>% 
   dplyr::filter(grepl("^[0-9.]+$", Human_mf_intensity_per20uL)) %>% # Filter out info (e.g. "Captured mosquitoes," etc.)
-  dplyr::filter(grepl("^[0-9.]+$", Mosquito_totaldissected)) %>% # So used data based on mfH & total dissected of mosquitoes
+  dplyr::filter(grepl("^[0-9.]+$", Mosquito_totaldissected)) %>% # Used data based on mfH & total dissected of mosquitoes
   # dplyr::filter(Mosquito_species != "An. melas") %>% # Omit An. melas
   dplyr::mutate(Human_mf_intensity_per1mL = as.numeric(Human_mf_intensity_per1mL),
                 Human_mf_intensity_per20uL = as.numeric(Human_mf_intensity_per20uL),

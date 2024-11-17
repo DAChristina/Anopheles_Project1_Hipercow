@@ -15,7 +15,7 @@ library(readxl)
 dat_sel <- read.csv("inputs/Mosquito_EstablishedInfection_Data_clean.csv")
 
 # 2. SUCCESSSS glm #############################################################
-# TRIAL use glmm by family.glmm = binomial # FAILED coz' package inconsistencies
+
 # 2.1. Use mfE vs. Proportion, ALL SPECIES #####################################
 dat_anal <- dat_sel %>% 
   select(Reference, Mosquito_species, Mosquito_larvae_infected_proportion_fromtotaldissected, Mosquito_totaldissected, Mosquito_larvae_infected_count, mfE_mean_calculated) %>% 
@@ -25,7 +25,7 @@ dat_anal <- dat_sel %>%
   # view() %>% 
   glimpse()
 
-# To simplify my life a bit
+# To simplify the code
 y <- dat_anal$Mosquito_larvae_infected_proportion_fromtotaldissected
 x <- dat_anal$mfE_mean_calculated
 AllMosq <- dat_anal$Mosquito_totaldissected
@@ -75,6 +75,10 @@ bootstrapGLM <- function(y, x, repetitions, confidence.level = 0.95, seed = 0) {
 
 logit <- function(x,l1,l2) { # Translated from the log-odds function from b0 = l1 & b1 = l2
   1/(1+exp(-(l1+l2*x)))
+}
+
+reverse_logit <- function(y, l1, l2) { # To find the value of x (ingested mf), given y = 50%
+  (log(y/(1-y))-l1)/l2
 }
 
 # Call bootstrap with ORI data
