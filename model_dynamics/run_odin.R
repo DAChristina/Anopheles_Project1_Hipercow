@@ -102,6 +102,84 @@ write.csv(y_gambiae, "outputs/odin_IHperH_An_gambiae.csv", row.names = F)
 write.csv(y_arabiensis, "outputs/odin_IHperH_An_arabiensis.csv", row.names = F)
 
 
+# 2.2. K #######################################################################
+run_K <- function(species) {
+  species_params <- get_species(species) # Assumes get_species function is defined in deterministic_odin.R
+  
+  params <- list(
+    cycle_width = seq(3, 30, by = 3),
+    g1 = species_params$g1,
+    g2 = species_params$g2,
+    mu0 = .34, # Per-capita daily mortality rate of Eggs & early instar larvae *3 days for 1 gonotrophic cycle
+    K = seq(0, 268000, by = 100), # 267800; Saturation coefficient
+    gamma_L = 13.25, # Density-dependence effect on late instars relative to early instars
+    lambda = 10/10, # Biting rate of mosquitoes per cycle
+    g_HV = .37, # Vector competence
+    epsilon = 1/(12/3), # Incubation rate of LF in mosquitoes (per-cycle)
+    I_H_per_H = .01 # Proportion of infected humans in the population
+  )
+  
+  # Initialize vectors for storage
+  Eggs <- numeric(length(params$K))
+  Larvae <- numeric(length(params$K))
+  Nullipars <- numeric(length(params$K))
+  
+  S_v_loop <- numeric(length(params$K))
+  E_v_loop <- numeric(length(params$K))
+  I_v_loop <- numeric(length(params$K))
+  V_loop <- numeric(length(params$K))
+  Prev_loop <- numeric(length(params$K))
+  Pos_loop <- numeric(length(params$K))
+  
+  # Loop through each value of K
+  for (i in seq_along(params$K)) {
+    # Update K in parameters
+    current_params <- params
+    current_params$K <- params$K[i]
+    
+    # Create the model and run it
+    mod <- transition$new(user = current_params)
+    timesteps <- seq(0, 2000, by = 1)
+    y <- mod$run(timesteps)
+    
+    # Store results for the last timestep
+    Eggs <- tail(y[,"E"], 1)
+    Larvae <- tail(y[,"L"], 1)
+    Nullipars <- tail(y[,"N"], 1)
+    
+    S_v_loop[i] <- tail(y[,"S_v_tot"], 1)
+    E_v_loop[i] <- tail(y[,"E_v_tot"], 1)
+    I_v_loop[i] <- tail(y[,"I_v_tot"], 1)
+    V_loop[i] <- tail(y[,"V_tot"], 1)
+    Prev_loop[i] <- tail(y[,"prev"], 1)
+    Pos_loop[i] <- tail(y[,"pos"], 1)
+  }
+  
+  # Create a df to store the output
+  Output_K <- data.frame(
+    K = params$K,
+    Eggs = Eggs,
+    Larvae = Larvae,
+    Nullipars = Nullipars,
+    S_v_loop = S_v_loop,
+    E_v_loop = E_v_loop,
+    I_v_loop = I_v_loop,
+    V_loop = V_loop,
+    Prev_loop = Prev_loop,
+    Pos_loop = Pos_loop
+  )
+  
+  return(Output_K)
+}
+
+# Run the model for different species
+y_gambiae <- run_K("gambiae")
+y_arabiensis <- run_K("arabiensis")
+
+write.csv(y_gambiae, "outputs/odin_K_An_gambiae.csv", row.names = F)
+write.csv(y_arabiensis, "outputs/odin_K_An_arabiensis.csv", row.names = F)
+
+
 # 2.3. epsilon #################################################################
 run_epsilon <- function(species) {
   species_params <- get_species(species) # Assumes get_species function is defined in deterministic_odin.R
@@ -120,6 +198,10 @@ run_epsilon <- function(species) {
   )
   
   # Initialize vectors for storage
+  Eggs <- numeric(length(params$epsilon))
+  Larvae <- numeric(length(params$epsilon))
+  Nullipars <- numeric(length(params$epsilon))
+  
   S_v_loop <- numeric(length(params$epsilon))
   E_v_loop <- numeric(length(params$epsilon))
   I_v_loop <- numeric(length(params$epsilon))
@@ -129,7 +211,7 @@ run_epsilon <- function(species) {
   
   # Loop through each value of epsilon
   for (i in seq_along(params$epsilon)) {
-    # Update InfHuman in parameters
+    # Update epsilon in parameters
     current_params <- params
     current_params$epsilon <- params$epsilon[i]
     
@@ -139,6 +221,10 @@ run_epsilon <- function(species) {
     y <- mod$run(timesteps)
     
     # Store results for the last timestep
+    Eggs <- tail(y[,"E"], 1)
+    Larvae <- tail(y[,"L"], 1)
+    Nullipars <- tail(y[,"N"], 1)
+    
     S_v_loop[i] <- tail(y[,"S_v_tot"], 1)
     E_v_loop[i] <- tail(y[,"E_v_tot"], 1)
     I_v_loop[i] <- tail(y[,"I_v_tot"], 1)
@@ -150,6 +236,9 @@ run_epsilon <- function(species) {
   # Create a df to store the output
   Output_epsilon <- data.frame(
     epsilon = params$epsilon,
+    Eggs = Eggs,
+    Larvae = Larvae,
+    Nullipars = Nullipars,
     S_v_loop = S_v_loop,
     E_v_loop = E_v_loop,
     I_v_loop = I_v_loop,
@@ -200,7 +289,7 @@ run_gamma_L <- function(species) {
   
   # Loop through each value of gamma_L
   for (i in seq_along(params$gamma_L)) {
-    # Update InfHuman in parameters
+    # Update gamma_L in parameters
     current_params <- params
     current_params$gamma_L <- params$gamma_L[i]
     
@@ -265,6 +354,10 @@ run_lambda <- function(species) {
   )
   
   # Initialize vectors for storage
+  Eggs <- numeric(length(params$lambda))
+  Larvae <- numeric(length(params$lambda))
+  Nullipars <- numeric(length(params$lambda))
+  
   S_v_loop <- numeric(length(params$lambda))
   E_v_loop <- numeric(length(params$lambda))
   I_v_loop <- numeric(length(params$lambda))
@@ -274,7 +367,7 @@ run_lambda <- function(species) {
   
   # Loop through each value of lambda
   for (i in seq_along(params$lambda)) {
-    # Update InfHuman in parameters
+    # Update lambda in parameters
     current_params <- params
     current_params$lambda <- params$lambda[i]
     
@@ -284,6 +377,10 @@ run_lambda <- function(species) {
     y <- mod$run(timesteps)
     
     # Store results for the last timestep
+    Eggs <- tail(y[,"E"], 1)
+    Larvae <- tail(y[,"L"], 1)
+    Nullipars <- tail(y[,"N"], 1)
+    
     S_v_loop[i] <- tail(y[,"S_v_tot"], 1)
     E_v_loop[i] <- tail(y[,"E_v_tot"], 1)
     I_v_loop[i] <- tail(y[,"I_v_tot"], 1)
@@ -295,6 +392,9 @@ run_lambda <- function(species) {
   # Create a df to store the output
   Output_lambda <- data.frame(
     lambda = params$lambda,
+    Eggs = Eggs,
+    Larvae = Larvae,
+    Nullipars = Nullipars,
     S_v_loop = S_v_loop,
     E_v_loop = E_v_loop,
     I_v_loop = I_v_loop,
@@ -345,7 +445,7 @@ run_mu0 <- function(species) {
   
   # Loop through each value of mu0
   for (i in seq_along(params$mu0)) {
-    # Update InfHuman in parameters
+    # Update mu0 in parameters
     current_params <- params
     current_params$mu0 <- params$mu0[i]
     
