@@ -127,14 +127,16 @@ filtered_data <- dplyr::bind_rows(dat %>%
                                     dplyr::filter(I_H_per_H %in% selected_prevalences) %>%
                                     dplyr::mutate(species = "An. gambiae s.s.",
                                                   PCR_pool = 1,
-                                                  probability = Pos_loop.x) %>% 
-                                    dplyr::select(I_H_per_H, species, PCR_pool, probability),
+                                                  probability = Pos_loop.x,
+                                                  positives = Pos_loop.x) %>% 
+                                    dplyr::select(I_H_per_H, species, PCR_pool, probability, positives),
                                   dat %>% 
                                     dplyr::filter(I_H_per_H %in% selected_prevalences) %>%
                                     dplyr::mutate(species = "An. arabiensis",
                                                   PCR_pool = 1,
-                                                  probability = Pos_loop.y) %>% 
-                                  dplyr::select(I_H_per_H, species, PCR_pool, probability)
+                                                  probability = Pos_loop.y,
+                                                  positives = Pos_loop.y) %>% 
+                                  dplyr::select(I_H_per_H, species, PCR_pool, probability, positives)
 )
 
 # Calculate filtered data
@@ -183,17 +185,17 @@ filtered_data_pool <- dplyr::bind_rows(filtered_data %>%
 dat_pooled_calculations <- dplyr::bind_rows(filtered_data, filtered_data_pool)
 
 # Data viz!
-png("pictures/odin_IHperH_PCR_pool.png", width = 24, height = 12, unit = "cm", res = 1200)
-ggplot(dat_pooled_calculations %>% 
-         dplyr::filter(PCR_pool %in% c(5, 10, 15, 20)) #%>% 
-         # dplyr::mutate(probability = 1-probability) # Trial visualize the probability of mosquitoes are negative in a pool ((1-p)^n)
-         # dplyr::mutate(probability = (1-(1-probability)^(1/PCR_pool))^PCR_pool) # Trial visualize the probability when all mosquitoes are positive within a pool (p^n)
-         # dplyr::mutate(probability = 1-(1-(1-probability)^(1/PCR_pool))^PCR_pool) # Trial visualize the probability when at least have 1 negative mosquito within a pool (1-p^n)
-       ,
-       aes(x = I_H_per_H, y = probability,
-                                    colour = PCR_pool, group = PCR_pool)) +
+# https://wilkelab.org/cowplot/articles/shared_legends.html
+InfHuman_vs_prob <- ggplot(dat_pooled_calculations %>% 
+                             dplyr::filter(PCR_pool %in% c(5, 10, 15, 20)) #%>% 
+                           # dplyr::mutate(probability = 1-probability) # Trial visualize the probability of mosquitoes are negative in a pool ((1-p)^n)
+                           # dplyr::mutate(probability = (1-(1-probability)^(1/PCR_pool))^PCR_pool) # Trial visualize the probability when all mosquitoes are positive within a pool (p^n)
+                           # dplyr::mutate(probability = 1-(1-(1-probability)^(1/PCR_pool))^PCR_pool) # Trial visualize the probability when at least have 1 negative mosquito within a pool (1-p^n)
+                           ,
+                           aes(x = I_H_per_H, y = probability,
+                               colour = PCR_pool, group = PCR_pool)) +
   geom_line(size = 1) +
-  labs(title = "Probability of at least one positive mosquito found in pool", 
+  labs(title = "Probability, given the proportion LF in human (with microfilaremia)", 
        x = "Proportion of LF in human population (microfilaremia)",
        y = "P(at least one positive mosquito)") +
   xlim(0,0.3) + ylim(0, max(dat_pooled_calculations$probability)) +
@@ -208,6 +210,46 @@ ggplot(dat_pooled_calculations %>%
   ) +
   guides(colour = guide_legend(title = "PCR pool")) +
   facet_wrap(~ species, scales = "free_y")
+InfHuman_vs_prob
+
+
+posmosq_vs_prob <- ggplot(dat_pooled_calculations %>% 
+                             dplyr::filter(PCR_pool %in% c(5, 10, 15, 20)) #%>% 
+                           # dplyr::mutate(probability = 1-probability) # Trial visualize the probability of mosquitoes are negative in a pool ((1-p)^n)
+                           # dplyr::mutate(probability = (1-(1-probability)^(1/PCR_pool))^PCR_pool) # Trial visualize the probability when all mosquitoes are positive within a pool (p^n)
+                           # dplyr::mutate(probability = 1-(1-(1-probability)^(1/PCR_pool))^PCR_pool) # Trial visualize the probability when at least have 1 negative mosquito within a pool (1-p^n)
+                           ,
+                           aes(x = positives, y = probability,
+                               colour = PCR_pool, group = PCR_pool)) +
+  geom_line(size = 1) +
+  labs(title = "Probability, given the proportion of positive mosquitoes", 
+       x = "Proportion of positive mosquitoes",
+       y = "P(at least one positive mosquito)") +
+  xlim(0,0.1614952) + ylim(0, max(dat_pooled_calculations$probability)) +
+  # ylim(0, 0.25) +
+  # theme_minimal() +
+  theme_minimal(base_size = 15) + 
+  theme(
+    panel.grid.major = element_line(size = 0.2, color = "grey80"),
+    panel.grid.minor = element_line(size = 0.2, color = "grey80"),
+    axis.line = element_line(color = "black"),
+    strip.text = element_text(face = "italic")
+  ) +
+  guides(colour = guide_legend(title = "PCR pool")) +
+  facet_wrap(~ species, scales = "free_y")
+posmosq_vs_prob
+
+png("pictures/odin_IHperH_PCR_pool.png", width = 24, height = 24, unit = "cm", res = 1200)
+prow <- cowplot::plot_grid(
+  InfHuman_vs_prob + theme(legend.position="none"),
+  posmosq_vs_prob + theme(legend.position="bottom"),
+  align = 'v',
+  labels = c("A", "B"),
+  hjust = -1,
+  nrow = 2,
+  rel_heights = c(1, 1.1)
+)
+prow
 dev.off()
 
 
