@@ -1,5 +1,6 @@
 # Data viz!
 library(tidyverse)
+source("global/all_function.R") # Collected functions stored here!
 
 # 1. Default parameters based on thesis ########################################
 # (pending)
@@ -119,10 +120,161 @@ cowplot::plot_grid(A_infective, B_positive, ncol = 2,
 dev.off()
 
 
-# Selected data for PCR pool calculations
+# Selected data for PCR pool calculations ######################################
 selected_prevalences <- c(0.01, 0.015, 0.02, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40)
 
-# Filter the dat data frame to include only the selected prevalence values
+# Filter the dat data frame for binom analysis
+redefine_data <- dplyr::bind_rows(dat %>%
+                                    dplyr::filter(I_H_per_H %in% selected_prevalences) %>%
+                                    dplyr::mutate(species = "An. gambiae s.s.",
+                                                  PCR_pool = 1,
+                                                  p_positive = Pos_loop.x,
+                                                  p_infective = Prev_loop.x) %>% 
+                                    dplyr::select(I_H_per_H, species, PCR_pool, p_positive, p_infective),
+                                  dat %>% 
+                                    dplyr::filter(I_H_per_H %in% selected_prevalences) %>%
+                                    dplyr::mutate(species = "An. arabiensis",
+                                                  PCR_pool = 1,
+                                                  p_positive = Pos_loop.y,
+                                                  p_infective = Prev_loop.y) %>% 
+                                    dplyr::select(I_H_per_H, species, PCR_pool, p_positive, p_infective)
+) %>% 
+  tidyr::pivot_longer(cols = starts_with("p_"),
+                      names_to = "p_types",
+                      values_to = "p_values") %>% 
+  dplyr::mutate(P_confidence = 0.95) %>% 
+  dplyr::bind_rows((.) %>% 
+                     dplyr::mutate(P_confidence = 0.99)) %>% 
+  dplyr::bind_rows((.) %>% 
+                     dplyr::mutate(PCR_pool = 2),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 3),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 4),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 5),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 6),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 7),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 8),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 9),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 10),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 15),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 20),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 25),
+                   (.) %>% 
+                     dplyr::mutate(PCR_pool = 30))
+
+binom_analyses <- redefine_data %>% 
+  dplyr::mutate(n_1_binom = analyse_function(p = p_values, P = P_confidence, method = "binomial"),
+                n_2_binom_pooled = analyse_function(p = p_values, P = P_confidence, method = "pooled_binomial", pool_size = PCR_pool),
+                n_3_beta_binom_pooled = analyse_function(p = p_values, P = P_confidence, method = "pooled_beta_binomial", pool_size = PCR_pool, het = 0.01))
+
+write.csv(binom_analyses, "outputs/odin_IHperH_report_table_n_pooled_mosquitoes_binom_analyses.csv", row.names = F)
+
+# specified data chosen for P_confidence = 99%, PCR = 30 mosquitoes per pool, stratified by 1% OR 2% mf in human and mosquito species
+filtered_binom_table <- binom_analyses %>% 
+  dplyr::filter(I_H_per_H %in% c(0.01, 0.02),
+                PCR_pool == 30,
+                # p_types == "p_positive", # p_positive or p_infective
+                P_confidence == 0.99) %>%  # 95% or 99%
+  distinct(.keep_all = T) %>% 
+  view()
+
+write.csv(filtered_binom_table, "outputs/odin_IHperH_report_table_n_pooled_mosquitoes_binom_analyses_filtered.csv", row.names = F)
+
+
+# Data viz!
+# https://wilkelab.org/cowplot/articles/shared_legends.html
+
+define_binom_methods <- c("n_1_binom", "n_2_binom_pooled", "n_3_beta_binom_pooled")
+plot_title_positives <- list(n_1_binom = "Number of Dissected Mosquitoes that are Needed\ngiven p for Positive Mosquitoes with 99% Confidence",
+                             n_2_binom_pooled = "Number of Pool that are Needed for PCR Analysis\ngiven p for Positive Mosquitoes with 99% Confidence",
+                             n_3_beta_binom_pooled = "Number of Pool that are Needed for PCR Analysis, with Dispersion = 0.01\ngiven p for Positive Mosquitoes with 99% Confidence")
+
+plot_title_infectives <- list(n_1_binom = "Number of Dissected Mosquitoes that are Needed\ngiven p for Infective Mosquitoes with 99% Confidence",
+                             n_2_binom_pooled = "Number of Pool that are Needed for PCR Analysis\ngiven p for Infective Mosquitoes with 99% Confidence",
+                             n_3_beta_binom_pooled = "Number of Pool that are Needed for PCR Analysis, with Dispersion = 0.01\ngiven p for Infective Mosquitoes with 99% Confidence")
+
+# I only viz positive results (all LF stages in mosquitoes with 99& confidence)
+for (y_col in define_binom_methods){
+  
+  filtered_binom_methods <- binom_analyses %>% 
+    dplyr::filter(PCR_pool %in% c(5, 10, 15, 20, 25, 30),
+                  p_types == "p_positive", # p_positive or p_infective
+                  P_confidence == 0.99) # 95% or 99%
+  
+  title <- paste(plot_title[[y_col]])
+  file_path <- file.path("pictures", paste0("odin_IHperH_PCR_pool_positives_number_mosquitoes_", y_col, ".png"))
+  
+  png(file = file_path, width = 24, height = 12, unit = "cm", res = 1200)
+  
+  print_plot <- ggplot(filtered_binom_methods,
+                       aes(x = I_H_per_H, y = .data[[y_col]], # 3 methods available
+                           colour = PCR_pool, group = PCR_pool)) +
+    geom_line(size = 1) +
+    labs(title = plot_title_positives, 
+         x = "Proportion of LF in human population (microfilaremia)",
+         y = "Number of Mosquitoes") +
+    xlim(0,0.4) + 
+    theme_minimal(base_size = 15) + 
+    theme(
+      panel.grid.major = element_line(size = 0.2, color = "grey80"),
+      panel.grid.minor = element_line(size = 0.2, color = "grey80"),
+      axis.line = element_line(color = "black"),
+      strip.text = element_text(face = "italic")
+    ) +
+    guides(colour = guide_legend(title = "PCR pool")) +
+    facet_wrap(~ species, scales = "free_y")
+  print(print_plot)
+  
+  dev.off()
+}
+
+# This time infective results (L3, or "established infection" stages in mosquitoes with 99& confidence)
+for (y_col in define_binom_methods){
+  
+  filtered_binom_methods <- binom_analyses %>% 
+    dplyr::filter(PCR_pool %in% c(5, 10, 15, 20, 25, 30),
+                  p_types == "p_infective", # p_positive or p_infective
+                  P_confidence == 0.99) # 95% or 99%
+  
+  title <- paste(plot_title[[y_col]])
+  file_path <- file.path("pictures", paste0("odin_IHperH_PCR_pool_infectives_number_mosquitoes_", y_col, ".png"))
+  
+  png(file = file_path, width = 24, height = 12, unit = "cm", res = 1200)
+  
+  print_plot <- ggplot(filtered_binom_methods,
+                       aes(x = I_H_per_H, y = .data[[y_col]], # 3 methods available
+                           colour = PCR_pool, group = PCR_pool)) +
+    geom_line(size = 1) +
+    labs(title = plot_title_infectives, 
+         x = "Proportion of LF in human population (microfilaremia)",
+         y = "Number of Mosquitoes") +
+    xlim(0,0.4) + 
+    theme_minimal(base_size = 15) + 
+    theme(
+      panel.grid.major = element_line(size = 0.2, color = "grey80"),
+      panel.grid.minor = element_line(size = 0.2, color = "grey80"),
+      axis.line = element_line(color = "black"),
+      strip.text = element_text(face = "italic")
+    ) +
+    guides(colour = guide_legend(title = "PCR pool")) +
+    facet_wrap(~ species, scales = "free_y")
+  print(print_plot)
+  
+  dev.off()
+}
+
+
+# Filter the dat data frame to include only the selected prevalence values #####
 filtered_data <- dplyr::bind_rows(dat %>%
                                     dplyr::filter(I_H_per_H %in% selected_prevalences) %>%
                                     dplyr::mutate(species = "An. gambiae s.s.",
@@ -250,6 +402,47 @@ prow <- cowplot::plot_grid(
   rel_heights = c(1, 1.1)
 )
 prow
+dev.off()
+
+# How about calculating variance for pooled mosquitoes = 20?
+variance_trial <- dat_pooled_calculations %>% 
+  dplyr::mutate(std_dev_20 = sqrt(probability * (1 - probability)),
+                lower_20 = probability - std_dev_20,
+                upper_20 = probability + std_dev_20)
+
+variance_trial$lower_20 <- pmax(variance_trial$lower_20, 0)
+variance_trial$upper_20 <- pmin(variance_trial$upper_20, 1)
+
+
+# Trial Plot
+png("pictures/odin_IHperH_PCR_pool_20_with_stdev.png", width = 24, height = 12, unit = "cm", res = 1200)
+pool_20_variance <- ggplot(variance_trial %>% 
+                            dplyr::filter(PCR_pool ==20) #%>% 
+                          # dplyr::mutate(probability = 1-probability) # Trial visualize the probability of mosquitoes are negative in a pool ((1-p)^n)
+                          # dplyr::mutate(probability = (1-(1-probability)^(1/PCR_pool))^PCR_pool) # Trial visualize the probability when all mosquitoes are positive within a pool (p^n)
+                          # dplyr::mutate(probability = 1-(1-(1-probability)^(1/PCR_pool))^PCR_pool) # Trial visualize the probability when at least have 1 negative mosquito within a pool (1-p^n)
+                          ,
+                          aes(x = positives, y = probability,
+                              # colour = PCR_pool,
+                              group = PCR_pool)) +
+  geom_line(size = 1, colour = "darkblue") +
+  geom_ribbon(aes(ymin = lower_20, ymax = upper_20), fill = "steelblue", colour = NA, alpha = 0.4) +
+  labs(title = "Probability of at least 1 positive mosquito\nin pooled PCR analysis (n = 20, with STDEV)", 
+       x = "Proportion of positive mosquitoes",
+       y = "P(at least one positive mosquito)") +
+  xlim(0,0.1614952) + ylim(min(variance_trial$lower_20)-0.05, max(variance_trial$upper_20)+0.05) +
+  # ylim(0, 0.25) +
+  # theme_minimal() +
+  theme_minimal(base_size = 15) + 
+  theme(
+    panel.grid.major = element_line(size = 0.2, color = "grey80"),
+    panel.grid.minor = element_line(size = 0.2, color = "grey80"),
+    axis.line = element_line(color = "black"),
+    strip.text = element_text(face = "italic")
+  ) +
+  # guides(colour = guide_legend(title = "PCR pool")) +
+  facet_wrap(~ species, scales = "free_y")
+pool_20_variance
 dev.off()
 
 
