@@ -53,17 +53,20 @@ A_infective <- ggplot(dat, aes(x = I_H_per_H)) +
   geom_point(data = dat_mf_threshold, aes(x = I_H_per_H, y = Prev_loop.x, color = "An. gambiae s.s.")) +
   geom_text(data = dat_mf_threshold, aes(x = I_H_per_H + 0.001,
                                          y = Prev_loop.x - 0.0009, 
-                                         label = paste0("(", I_H_per_H, ", ", round(Prev_loop.x, 4), ")")), 
+                                         label = paste0("(", I_H_per_H*100, "%, ", round(Prev_loop.x*1000, 0), ")")), 
             color = "red", hjust = 0.5) +
   geom_point(data = dat_mf_threshold, aes(x = I_H_per_H, y = Prev_loop.y, color = "An. arabiensis")) +
   geom_text(data = dat_mf_threshold, aes(x = I_H_per_H - 0.001,
                                          y = Prev_loop.y + 0.0008, 
-                                         label = paste0("(", I_H_per_H, ", ", round(Prev_loop.y, 4), ")")), 
+                                         label = paste0("(", I_H_per_H*100, "%, ", round(Prev_loop.y*1000, 0), ")")), 
             color = "blue", hjust = 0.5) +
-  labs(title = "Proportion of infective mosquitoes", 
-       x = "Proportion of LF in human population\n(microfilaremia)",
-       y = "Proportion of infective mosquitoes") +
-  xlim(0,.023) + ylim(0,.01) +
+  labs(title = "Infective Mosquitoes\n(per 1,000 Parous Mosquitoes)", 
+       x = "Percentage of LF in human population\n(microfilaremia)",
+       y = "Number of infective mosquitoes") +
+  scale_x_continuous(labels = function(x) paste0(x * 100, "%")) +
+  scale_y_continuous(labels = function(y) paste0(y * 1000)) +
+  coord_cartesian(xlim = c(0, 0.023), ylim = c(0, 0.01)) +
+  # xlim(0,.023) + ylim(0,.01) +
   scale_color_manual(
     values = c("An. gambiae s.s." = "red", "An. arabiensis" = "blue"),
     labels = c(expression(italic("An. arabiensis")), expression(italic("An. gambiae") * " s.s."))
@@ -86,17 +89,20 @@ B_positive <- ggplot(dat, aes(x = I_H_per_H)) +
   geom_point(data = dat_mf_threshold, aes(x = I_H_per_H, y = Pos_loop.x, color = "An. gambiae s.s.")) +
   geom_text(data = dat_mf_threshold, aes(x = I_H_per_H + 0.001,
                                          y = Pos_loop.x - 0.002, 
-                                         label = paste0("(", I_H_per_H, ", ", round(Pos_loop.x, 4), ")")), 
+                                         label = paste0("(", I_H_per_H*100, "%, ", round(Pos_loop.x*1000, 0), ")")), 
             color = "red", hjust = 0.5) +
   geom_point(data = dat_mf_threshold, aes(x = I_H_per_H, y = Pos_loop.y, color = "An. arabiensis")) +
   geom_text(data = dat_mf_threshold, aes(x = I_H_per_H - 0.001,
                                          y = Pos_loop.y + 0.0025, 
-                                         label = paste0("(", I_H_per_H, ", ", round(Pos_loop.y, 4), ")")), 
+                                         label = paste0("(", I_H_per_H*100, "%, ", round(Pos_loop.y*1000, 0), ")")), 
             color = "blue", hjust = 0.5) +
-  labs(title = "Proportion of positive mosquitoes", 
-       x = "Proportion of LF in human population\n(microfilaremia)",
-       y = "Proportion of positive mosquitoes") +
-  xlim(0,.023) + ylim(0,.02) +
+  labs(title = "Positive Mosquitoes\n(per 1,000 Parous Mosquitoes)", 
+       x = "Percentage of LF in human population\n(microfilaremia)",
+       y = "Number of positive mosquitoes") +
+  scale_x_continuous(labels = function(x) paste0(x * 100, "%")) +
+  scale_y_continuous(labels = function(y) paste0(y * 1000)) +
+  coord_cartesian(xlim = c(0, 0.023), ylim = c(0, 0.02)) +
+  # xlim(0,.023) + ylim(0,.02) +
   scale_color_manual(
     values = c("An. gambiae s.s." = "red", "An. arabiensis" = "blue"),
     labels = c(expression(italic("An. arabiensis")), expression(italic("An. gambiae") * " s.s."))
@@ -112,13 +118,14 @@ B_positive <- ggplot(dat, aes(x = I_H_per_H)) +
     legend.justification = c(0, 1),
     legend.title = element_blank())
 
-png("pictures/odin_IHperH.png", width = 24, height = 12, unit = "cm", res = 1200)
+png("pictures/odin_IHperH_modified_percent.png", width = 24, height = 12, unit = "cm", res = 1200)
 cowplot::plot_grid(A_infective, B_positive, ncol = 2,
                    labels = c("A", "B")
                    # align = 'h'
 )
 dev.off()
 
+# Version 2 when I slightly modify the axes
 
 # Selected data for PCR pool calculations ######################################
 selected_prevalences <- c(0.01, 0.015, 0.02, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40)
@@ -179,10 +186,10 @@ binom_analyses <- redefine_data %>%
 
 write.csv(binom_analyses, "outputs/odin_IHperH_report_table_n_pooled_mosquitoes_binom_analyses.csv", row.names = F)
 
-# specified data chosen for P_confidence = 99%, PCR = 30 mosquitoes per pool, stratified by 1% OR 2% mf in human and mosquito species
+# specified data chosen for P_confidence = 99%, PCR = 20 & 30 mosquitoes per pool, stratified by 1% OR 2% mf in human and mosquito species
 filtered_binom_table <- binom_analyses %>% 
   dplyr::filter(I_H_per_H %in% c(0.01, 0.02),
-                PCR_pool == 30,
+                PCR_pool %in% c(20, 30),
                 # p_types == "p_positive", # p_positive or p_infective
                 P_confidence == 0.99) %>%  # 95% or 99%
   distinct(.keep_all = T) %>% 
@@ -195,13 +202,13 @@ write.csv(filtered_binom_table, "outputs/odin_IHperH_report_table_n_pooled_mosqu
 # https://wilkelab.org/cowplot/articles/shared_legends.html
 
 define_binom_methods <- c("n_1_binom", "n_2_binom_pooled", "n_3_beta_binom_pooled")
-plot_title_positives <- list(n_1_binom = "Number of Dissected Mosquitoes that are Needed\ngiven p for Positive Mosquitoes with 99% Confidence",
-                             n_2_binom_pooled = "Number of Pool that are Needed for PCR Analysis\ngiven p for Positive Mosquitoes with 99% Confidence",
-                             n_3_beta_binom_pooled = "Number of Pool that are Needed for PCR Analysis, with Dispersion = 0.01\ngiven p for Positive Mosquitoes with 99% Confidence")
+plot_title_positives <- list(n_1_binom = "Number of Dissected Mosquitoes that are Needed\ngiven p for Positive Mosquitoes (99% Confidence Level)",
+                             n_2_binom_pooled = "Number of Pool that are Needed for PCR Analysis\ngiven p for Positive Mosquitoes (99% Confidence Level)",
+                             n_3_beta_binom_pooled = "Number of Pool that are Needed for PCR Analysis, with Dispersion = 0.01\ngiven p for Positive Mosquitoes (99% Confidence Level)")
 
-plot_title_infectives <- list(n_1_binom = "Number of Dissected Mosquitoes that are Needed\ngiven p for Infective Mosquitoes with 99% Confidence",
-                             n_2_binom_pooled = "Number of Pool that are Needed for PCR Analysis\ngiven p for Infective Mosquitoes with 99% Confidence",
-                             n_3_beta_binom_pooled = "Number of Pool that are Needed for PCR Analysis, with Dispersion = 0.01\ngiven p for Infective Mosquitoes with 99% Confidence")
+plot_title_infectives <- list(n_1_binom = "Number of Dissected Mosquitoes that are Needed\ngiven p for Infective Mosquitoes (99% Confidence Level)",
+                             n_2_binom_pooled = "Number of Pool that are Needed for PCR Analysis\ngiven p for Infective Mosquitoes (99% Confidence Level)",
+                             n_3_beta_binom_pooled = "Number of Pool that are Needed for PCR Analysis, with Dispersion = 0.01\ngiven p for Infective Mosquitoes (99% Confidence Level)")
 
 # I only viz positive results (all LF stages in mosquitoes with 99& confidence)
 for (y_col in define_binom_methods){
@@ -211,7 +218,7 @@ for (y_col in define_binom_methods){
                   p_types == "p_positive", # p_positive or p_infective
                   P_confidence == 0.99) # 95% or 99%
   
-  title <- paste(plot_title[[y_col]])
+  title <- paste(plot_title_positives[[y_col]])
   file_path <- file.path("pictures", paste0("odin_IHperH_PCR_pool_positives_number_mosquitoes_", y_col, ".png"))
   
   png(file = file_path, width = 24, height = 12, unit = "cm", res = 1200)
@@ -220,10 +227,12 @@ for (y_col in define_binom_methods){
                        aes(x = I_H_per_H, y = .data[[y_col]], # 3 methods available
                            colour = PCR_pool, group = PCR_pool)) +
     geom_line(size = 1) +
-    labs(title = plot_title_positives, 
-         x = "Proportion of LF in human population (microfilaremia)",
-         y = "Number of Mosquitoes") +
-    xlim(0,0.4) + 
+    labs(title = title, 
+         x = "Percentage of LF in human population\n(microfilaremia)",
+         y = "Number") +
+    scale_x_continuous(labels = function(x) paste0(x * 100, "%")) +
+    coord_cartesian(xlim = c(0, 0.4)) +
+    # xlim(0,0.4) + 
     theme_minimal(base_size = 15) + 
     theme(
       panel.grid.major = element_line(size = 0.2, color = "grey80"),
@@ -238,6 +247,7 @@ for (y_col in define_binom_methods){
   dev.off()
 }
 
+
 # This time infective results (L3, or "established infection" stages in mosquitoes with 99& confidence)
 for (y_col in define_binom_methods){
   
@@ -246,7 +256,7 @@ for (y_col in define_binom_methods){
                   p_types == "p_infective", # p_positive or p_infective
                   P_confidence == 0.99) # 95% or 99%
   
-  title <- paste(plot_title[[y_col]])
+  title <- paste(plot_title_infectives[[y_col]])
   file_path <- file.path("pictures", paste0("odin_IHperH_PCR_pool_infectives_number_mosquitoes_", y_col, ".png"))
   
   png(file = file_path, width = 24, height = 12, unit = "cm", res = 1200)
@@ -255,10 +265,12 @@ for (y_col in define_binom_methods){
                        aes(x = I_H_per_H, y = .data[[y_col]], # 3 methods available
                            colour = PCR_pool, group = PCR_pool)) +
     geom_line(size = 1) +
-    labs(title = plot_title_infectives, 
-         x = "Proportion of LF in human population (microfilaremia)",
-         y = "Number of Mosquitoes") +
-    xlim(0,0.4) + 
+    labs(title = title, 
+         x = "Percentage of LF in human population\n(microfilaremia)",
+         y = "Number") +
+    scale_x_continuous(labels = function(x) paste0(x * 100, "%")) +
+    coord_cartesian(xlim = c(0, 0.4)) +
+    # xlim(0,0.4) + 
     theme_minimal(base_size = 15) + 
     theme(
       panel.grid.major = element_line(size = 0.2, color = "grey80"),
@@ -881,4 +893,48 @@ mu0_plot <- ggplot(dat,
 
 mu0_plot # In case I wanna combine the pictures later with cowplot
 dev.off()
+
+# Additional survivality/mortality viz #########################################
+# Survival, Gompertz (Clements & Paterson, 1981) ###############################
+# By using these parameters, age already in cycles,
+# TRANSFIL time step (1 month) equals to 10 gonotrophic cycle of mosquitoes
+# Gompertz mortality rate have already in cycle (Clements & Paterson, 1981)
+
+source("model_dynamics/deterministic_odin.R") # Collected functions stored here!
+data_viz <- function(species){
+  species_params <- get_species(species)
+  g1 = species_params$g1
+  g2 = species_params$g2
+  
+  survpercycle <- rep(0,10)
+  for (age in 0:10){
+    survpercycle[age] = 1*exp(-g1/g2*(exp(age*g2)-1)) # survival per cycle with daily mortality update
+  }
+  survpercycle
+  
+  plot(seq(1,10,by=1),survpercycle, type = "l")
+  
+}
+
+data_viz("arabiensis")
+data_viz("gambiae")
+
+# The viz using ggplot
+gambiae_params <- get_species("gambiae")
+arabiensis_params <- get_species("arabiensis")
+
+ggplot(aes(x = seq(0, 10, by = 3), y = survpercycle[age] = 1*exp(-g1/g2*(exp(age*g2)-1)),
+           colour = PCR_pool, group = PCR_pool)) +
+  geom_line(size = 1) +
+  labs(title = "Probability, given the proportion LF in human (with microfilaremia)", 
+       x = "Proportion of LF in human population (microfilaremia)",
+       y = "P(at least one positive mosquito)") +
+  theme_minimal(base_size = 15) + 
+  theme(
+    panel.grid.major = element_line(size = 0.2, color = "grey80"),
+    panel.grid.minor = element_line(size = 0.2, color = "grey80"),
+    axis.line = element_line(color = "black"),
+    strip.text = element_text(face = "italic")
+  ) +
+  guides(colour = guide_legend(title = "PCR pool"))
 

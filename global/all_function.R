@@ -2,15 +2,15 @@
 analyse_function <- function(p, P, method, pool_size = NULL, het = NULL) {
   
   n_binom <- function(p, P) {
-    ceiling(log(1 - P) / log(1 - p))
+    ceiling(log(1 - P) / log(1 - (p*0.983))) # PCR sensitivity = 98.3% compared to dissection method
   }
   
   n_pooled_binom <- function(p, P, pool_size) {
-    ceiling(log(1 - P) / (pool_size * log(1 - p)))
+    ceiling(log(1 - P) / (pool_size * log(1 - (p*0.983)))) # PCR sensitivity = 98.3% compared to dissection method
   }
   
   n_pooled_beta_binom <- function(p, P, pool_size, het) {
-    ceiling(-het * log(1 - P) / (p * log(1 + pool_size * het)))
+    ceiling(-het * log(1 - P) / ((p*0.983) * log(1 + pool_size * het))) # PCR sensitivity = 98.3% compared to dissection method
   }
   
   # Validate inputs

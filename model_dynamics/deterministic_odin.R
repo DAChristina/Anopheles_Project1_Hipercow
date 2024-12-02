@@ -33,7 +33,7 @@ transition <- odin::odin({
   ## S,E,I are arrays
   lambda <- user() # 10/10; biting rate of mosquitoes per cycle (source: TRANSFIL, 1 month of TRANSFIL has 10 cycles)
   g_HV <- user() # 0.37; Vector competence, the proportion of mosquitoes which pick up the infection when biting an infective host (source: TRANSFIL)
-  epsilon <- user() # 1/(14/3); incubation rate of LF in mosquitoes (per-cycle)
+  epsilon <- user() # 1/(12/3); incubation rate of LF in mosquitoes (per-cycle)
   I_H_per_H <- user() # 0.01; Proportion of infected humans in the population with detectable microfilariae
   
   # 2. INITIAL VALUES ############################################################
