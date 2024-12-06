@@ -19,6 +19,16 @@ transition <- odin::odin({
   g2 <- user()
   # With Survival(i) = (exp(-g1/g2*(exp(i*g2)-1))
   
+  l1 <- user() # species-specific parameter logistic function of mosquitoes with established infection, given mf
+  l2 <- user() # species-specific parameter logistic function of mosquitoes with established infection, given mf
+  ave_mf <- 4.6 # Average ingested mf (see paper 1)
+  zeta <- 0.03
+  eta <- 2.3520
+  tetta <- 482.5680
+  
+  # larvae <- (zeta * ave_mf^(eta))/(1+((ave_mf^(eta))/tetta)) # 1.01043 larvae
+  logit_infec <- 1/(1+exp(-(l1 + l2*ave_mf))) # logit_infect based on species
+  
   # Population Dynamics, Eggs -> Larvae -> Mature (White et al., 2011)
   beta <- 21.19*3 # FIXED, Egg deposition per-capita, per-day * 3 days for 1 gonotrophic cycles
   mu0 <- user() # .34; Per-capita daily mortality rate of Eggs & early instar larvae *3 days for 1 gonotrophic cycles
@@ -69,12 +79,12 @@ transition <- odin::odin({
   
   # Insert deriv(N) as the first cycle of susceptible mosquitoes
   # Disease dynamics
-  deriv(S_v[1])         <- -S_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*((1+lambda*g_HV*I_H_per_H)) +(N                                                        - cycle_rate[i]*S_v[i]*(exp(-g1/g2*(exp(i*g2)-1))))
-  deriv(S_v[2:N_cycle]) <- -S_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*((1+lambda*g_HV*I_H_per_H)) +(cycle_rate[i-1]*S_v[i-1]*(exp(-g1/g2*(exp((i-1)*g2)-1))) - cycle_rate[i]*S_v[i]*(exp(-g1/g2*(exp(i*g2)-1))))
+  deriv(S_v[1])         <- -S_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*((1+lambda*g_HV*(I_H_per_H*logit_infec))) +(N                                                        - cycle_rate[i]*S_v[i]*(exp(-g1/g2*(exp(i*g2)-1))))
+  deriv(S_v[2:N_cycle]) <- -S_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*((1+lambda*g_HV*(I_H_per_H*logit_infec))) +(cycle_rate[i-1]*S_v[i-1]*(exp(-g1/g2*(exp((i-1)*g2)-1))) - cycle_rate[i]*S_v[i]*(exp(-g1/g2*(exp(i*g2)-1))))
   # dS = [previous state] + [recent state]*(1-exposed-death)
   
-  deriv(E_v[1])         <- S_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*(lambda*g_HV*I_H_per_H) -E_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*(1+epsilon) +(                                                         - cycle_rate[i]*E_v[i]*(exp(-g1/g2*(exp(i*g2)-1))))
-  deriv(E_v[2:N_cycle]) <- S_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*(lambda*g_HV*I_H_per_H) -E_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*(1+epsilon) +(cycle_rate[i-1]*E_v[i-1]*(exp(-g1/g2*(exp((i-1)*g2)-1))) - cycle_rate[i]*E_v[i]*(exp(-g1/g2*(exp(i*g2)-1))))
+  deriv(E_v[1])         <- S_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*(lambda*g_HV*(I_H_per_H*logit_infec)) -E_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*(1+epsilon) +(                                                         - cycle_rate[i]*E_v[i]*(exp(-g1/g2*(exp(i*g2)-1))))
+  deriv(E_v[2:N_cycle]) <- S_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*(lambda*g_HV*(I_H_per_H*logit_infec)) -E_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*(1+epsilon) +(cycle_rate[i-1]*E_v[i-1]*(exp(-g1/g2*(exp((i-1)*g2)-1))) - cycle_rate[i]*E_v[i]*(exp(-g1/g2*(exp(i*g2)-1))))
   # dE = [previous state] + [recent state]*(1-infected-death)
   
   deriv(I_v[1])         <- E_v[i]*(exp(-g1/g2*(exp(i*g2)-1)))*(1-epsilon) -I_v[i]*(exp(-g1/g2*(exp(i*g2)-1))) +(                                                         - cycle_rate[i]*I_v[i]*(exp(-g1/g2*(exp(i*g2)-1))))
@@ -104,12 +114,44 @@ get_species <- function(species = "gambiae") {
   if (species == "gambiae") {
     g1 <- .356
     g2 <- .097
+    l1 <- -3.6393
+    l2 <- 0.5141
+    
+  } else if (species == "gambiae_low_CI") {
+    g1 <- .356
+    g2 <- .097
+    l1 <- -4.3849
+    l2 <- 0.4079
+    
+  } else if (species == "gambiae_up_CI") {
+    g1 <- .356
+    g2 <- .097
+    l1 <- -3.0565
+    l2 <- 0.6216
+    
+    
   } else if (species == "arabiensis") {
     g1 <- .339
     g2 <- .225
+    l1 <- -5.4303
+    l2 <- 1.1581
+    
+  } else if (species == "arabiensis_low_CI") {
+    g1 <- .339
+    g2 <- .225
+    l1 <- -6.5088
+    l2 <- 0.7932
+    
+  } else if (species == "arabiensis_up_CI") {
+    g1 <- .339
+    g2 <- .225
+    l1 <- -4.3895
+    l2 <- 1.5062
+    
+    
   } else {
-    stop("Only 'gambiae' or 'arabiensis' are available.")
+    stop("Only 'gambiae' or 'arabiensis' are available, including <species>_<low/up>_CI")
   }
   
-  return(list(g1 = g1, g2 = g2))
+  return(list(g1 = g1, g2 = g2, l1 = l1, l2 = l2))
 }

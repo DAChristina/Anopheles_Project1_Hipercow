@@ -10,6 +10,8 @@ run_0default <- function(species) {
     cycle_width = seq(3, 30, by = 3),
     g1 = species_params$g1,
     g2 = species_params$g2,
+    l1 = species_params$l1,
+    l2 = species_params$l2,
     mu0 = .34, # Per-capita daily mortality rate of Eggs & early instar larvae *3 days for 1 gonotrophic cycles
     K = 267800, # Saturation coefficient
     gamma_L = 13.25, # Effects of density-dependence on late instars (L) relative to early instars (E)
@@ -43,6 +45,8 @@ run_I_H_per_H <- function(species) {
     cycle_width = seq(3, 30, by = 3),
     g1 = species_params$g1,
     g2 = species_params$g2,
+    l1 = species_params$l1,
+    l2 = species_params$l2,
     mu0 = .34, # Per-capita daily mortality rate of Eggs & early instar larvae *3 days for 1 gonotrophic cycle
     K = 267800, # Saturation coefficient
     gamma_L = 13.25, # Density-dependence effect on late instars relative to early instars
@@ -101,6 +105,17 @@ y_arabiensis <- run_I_H_per_H("arabiensis")
 write.csv(y_gambiae, "outputs/odin_IHperH_An_gambiae.csv", row.names = F)
 write.csv(y_arabiensis, "outputs/odin_IHperH_An_arabiensis.csv", row.names = F)
 
+# Additional data for CI based on l1 and l2 logistic function
+y_gambiae_low_CI <- run_I_H_per_H("gambiae_low_CI")
+y_gambiae_up_CI <- run_I_H_per_H("gambiae_up_CI")
+y_arabiensis_low_CI <- run_I_H_per_H("arabiensis_low_CI")
+y_arabiensis_up_CI <- run_I_H_per_H("arabiensis_up_CI")
+
+write.csv(y_gambiae_low_CI, "outputs/odin_IHperH_An_gambiae_low_CI.csv", row.names = F)
+write.csv(y_gambiae_up_CI, "outputs/odin_IHperH_An_gambiae_up_CI.csv", row.names = F)
+write.csv(y_arabiensis_low_CI, "outputs/odin_IHperH_An_arabiensis_low_CI.csv", row.names = F)
+write.csv(y_arabiensis_up_CI, "outputs/odin_IHperH_An_arabiensis_up_CI.csv", row.names = F)
+
 
 # 2.2. K #######################################################################
 run_K <- function(species) {
@@ -110,6 +125,8 @@ run_K <- function(species) {
     cycle_width = seq(3, 30, by = 3),
     g1 = species_params$g1,
     g2 = species_params$g2,
+    l1 = species_params$l1,
+    l2 = species_params$l2,
     mu0 = .34, # Per-capita daily mortality rate of Eggs & early instar larvae *3 days for 1 gonotrophic cycle
     K = seq(0, 268000, by = 100), # 267800; Saturation coefficient
     gamma_L = 13.25, # Density-dependence effect on late instars relative to early instars
@@ -188,6 +205,8 @@ run_epsilon <- function(species) {
     cycle_width = seq(3, 30, by = 3),
     g1 = species_params$g1,
     g2 = species_params$g2,
+    l1 = species_params$l1,
+    l2 = species_params$l2,
     mu0 = .34, # Per-capita daily mortality rate of Eggs & early instar larvae *3 days for 1 gonotrophic cycle
     K = 267800, # Saturation coefficient
     gamma_L = 13.25, # Density-dependence effect on late instars relative to early instars
@@ -266,6 +285,8 @@ run_gamma_L <- function(species) {
     cycle_width = seq(3, 30, by = 3),
     g1 = species_params$g1,
     g2 = species_params$g2,
+    l1 = species_params$l1,
+    l2 = species_params$l2,
     mu0 = .34, # Per-capita daily mortality rate of Eggs & early instar larvae *3 days for 1 gonotrophic cycle
     K = 267800, # Saturation coefficient
     gamma_L = seq(9.82, 18, by = 0.01), # 13.25; Density-dependence effect on late instars relative to early instars
@@ -344,6 +365,8 @@ run_lambda <- function(species) {
     cycle_width = seq(3, 30, by = 3),
     g1 = species_params$g1,
     g2 = species_params$g2,
+    l1 = species_params$l1,
+    l2 = species_params$l2,
     mu0 = .34, # Per-capita daily mortality rate of Eggs & early instar larvae *3 days for 1 gonotrophic cycle
     K = 267800, # Saturation coefficient
     gamma_L = 13.25, # Density-dependence effect on late instars relative to early instars
@@ -422,6 +445,8 @@ run_mu0 <- function(species) {
     cycle_width = seq(3, 30, by = 3),
     g1 = species_params$g1,
     g2 = species_params$g2,
+    l1 = species_params$l1,
+    l2 = species_params$l2,
     mu0 = seq(0.025, 0.045, by = 0.001), # .34; Per-capita daily mortality rate of Eggs & early instar larvae *3 days for 1 gonotrophic cycle
     K = 267800, # Saturation coefficient
     gamma_L = 13.25, # Density-dependence effect on late instars relative to early instars
