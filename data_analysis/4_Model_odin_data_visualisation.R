@@ -22,15 +22,25 @@ plot(dat$I_H_per_H, dat$Prev_loop.x, # An. gambiae
      xlab = "Proportion of LF in human population\n(with microfilaremia)",
      ylab = "Proportion of infective mosquitoes",
      main = "Proportion of infective mosquitoes",
-     xlim = c(0,1), ylim = c(0,.3), type = "l", col = "red")
+     xlim = c(0,1), ylim = c(0,.4), type = "l", col = "red")
+lines(dat$I_H_per_H, dat$Ang_low_prev, col = "red", lty = 2)
+lines(dat$I_H_per_H, dat$Ang_up_prev, col = "red", lty = 2)
+
 lines(dat$I_H_per_H, dat$Prev_loop.y, col = "blue") # An. arabiensis
+lines(dat$I_H_per_H, dat$Ana_low_prev, col = "blue", lty = 2)
+lines(dat$I_H_per_H, dat$Ana_up_prev, col = "blue", lty = 2)
 
 plot(dat$I_H_per_H, dat$Pos_loop.x, # An. gambiae
      xlab = "Proportion of LF in human population\n(with microfilaremia)",
      ylab = "Proportion of positive mosquitoes",
      main = "Proportion of positive mosquitoes",
-     xlim = c(0,1), ylim = c(0,.3), type = "l", col = "red")
+     xlim = c(0,1), ylim = c(0,.4), type = "l", col = "red")
+lines(dat$I_H_per_H, dat$Ang_low_pos, col = "red", lty = 2)
+lines(dat$I_H_per_H, dat$Ang_up_pos, col = "red", lty = 2)
+
 lines(dat$I_H_per_H, dat$Pos_loop.y, col = "blue") # An. arabiensis
+lines(dat$I_H_per_H, dat$Ana_low_pos, col = "blue", lty = 2)
+lines(dat$I_H_per_H, dat$Ana_up_pos, col = "blue", lty = 2)
 par(mfrow = c(1,1))
 
 
@@ -937,33 +947,74 @@ data_viz <- function(species){
   
   survpercycle <- rep(0,10)
   for (age in 0:10){
-    survpercycle[age] = 1*exp(-g1/g2*(exp(age*g2)-1)) # survival per cycle with daily mortality update
+    survpercycle[age+1] = 1*exp(-g1/g2*(exp(age*g2)-1)) # survival per cycle with daily mortality update
   }
-  survpercycle
+  return(survpercycle)
   
-  plot(seq(1,10,by=1),survpercycle, type = "l")
+  # plot(seq(1,10,by=1),survpercycle, type = "l")
   
 }
 
-data_viz("arabiensis")
-data_viz("gambiae")
+# Additional data for Culex quinquefasciatus for comparison
+survpercycle <- numeric(11)  # that annoying dimension
+for (age in 0:10) {
+  survpercycle[age+1] = 1*exp(-0.572/0.513*(exp(age*0.513)-1))  # Adjust index for R's 1-based indexing
+}
+surv_Cx <- survpercycle
+surv_Cx
+
+surv_arabiensis <- data_viz("arabiensis")
+surv_gambiae <- data_viz("gambiae")
+
 
 # The viz using ggplot
 gambiae_params <- get_species("gambiae")
 arabiensis_params <- get_species("arabiensis")
 
-ggplot(aes(x = seq(0, 10, by = 3), y = survpercycle[age] = 1*exp(-g1/g2*(exp(age*g2)-1)),
-           colour = PCR_pool, group = PCR_pool)) +
+data_combined <- data.frame(
+  Age = rep(0:10, 3),
+  Survival = c(surv_arabiensis, surv_gambiae, surv_Cx),
+  Species = rep(c("An. arabiensis", "An. gambiae s.s.", "Cx. quinquefasciatus"), each = 11)
+) %>% 
+  glimpse()
+
+# Plot using ggplot
+png("pictures/odin_gompertz_survivability.png", width = 18, height = 10, unit = "cm", res = 1200)
+ggplot(data_combined, aes(x = Age, y = Survival,
+                          colour = Species,
+                          # group = Species,
+                          linetype = Species
+                          )) +
   geom_line(size = 1) +
-  labs(title = "Probability, given the proportion LF in human (with microfilaremia)", 
-       x = "Proportion of LF in human population (microfilaremia)",
-       y = "P(at least one positive mosquito)") +
-  theme_minimal(base_size = 15) + 
+  # scale_color_manual(values = custom_colors) +
+  scale_color_manual(
+    values = c("An. gambiae s.s." = "red",
+               "An. arabiensis" = "blue",
+               "Cx. quinquefasciatus" = "darkgreen"),
+    labels = c(expression(italic("An. arabiensis")),
+               expression(italic("An. gambiae") * " s.s."),
+               expression(italic("Cx. quinquefasciatus")))
+  ) +
+  geom_vline(xintercept = 4, linetype = "dotted", colour = "black") +
+  geom_label(x = 4, y = 0.5, label = "EIR\n(12 days)", colour = "black") +
+  annotate("text", x = 8, y = 0.5, label = "Infective\nState", angle = 0, vjust = -0.5, size = 5, color = "black") +
+  scale_linetype_manual(values = c("An. arabiensis" = "solid",
+                                   "An. gambiae s.s." = "solid",
+                                   "Cx. quinquefasciatus" = "dashed"),
+                        guide = "none") +
+  labs(title = "Survival Probability of Mosquito Species",
+       x = "Age (Gonotrophic Cycles)",
+       y = "Probability of Survival") +
+  # scale_x_continuous(labels = scales::number_format(accuracy = 1)) +
+  scale_x_continuous(breaks = 0:10, labels = as.character(0:10)) +  
+  theme_minimal(base_size = 15) +
   theme(
     panel.grid.major = element_line(size = 0.2, color = "grey80"),
     panel.grid.minor = element_line(size = 0.2, color = "grey80"),
     axis.line = element_line(color = "black"),
-    strip.text = element_text(face = "italic")
+    strip.text = element_text(face = "italic"),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11)
   ) +
-  guides(colour = guide_legend(title = "PCR pool"))
-
+  guides(colour = guide_legend(title = "Species"))
+dev.off()
